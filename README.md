@@ -14,3 +14,4 @@ URL: [https://github.com/GoodDee/EE439_Paper_Presentation/blob/main/Final%20Pres
 [Visualization on Individual Stocks](https://github.com/GoodDee/EE439_Paper_Presentation/blob/main/Individual%20Stocks%20Viz.ipynb)  
 
 ## R Materials  
+[Helper function, Main, Report in RMarkdown](https://github.com/GoodDee/EE439_Paper_Presentation/tree/main/Result_Presentation)
