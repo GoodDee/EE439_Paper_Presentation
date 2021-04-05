@@ -1,0 +1,115 @@
+---
+title: "Stock Report"
+date: 2021-04-10
+output: html_document
+params:
+  STOCK_NAME: "LHBA"
+  PRICE_FILE: "data/Bank_Price.csv"
+  VOL_FILE: "data/Bank_Volume.csv"
+---
+
+# Volatility Report for **`r params$STOCK_NAME`** during 2014-2019
+  
+```{r setup, include=FALSE}
+  library(tidyverse)
+  library(lubridate)
+  library(rugarch)
+  library(moments)
+  source("main.R")
+  library(cowplot)
+  library(tseries)
+  knitr::opts_chunk$set(fig.width = 6, fig.asp = 0.3) 
+  
+  # Possible Alternative Stocks:
+  # BBLT
+  # TMBT
+  # TFBT
+  # SBBT
+```
+
+Descriptive Summary and Plot
+----------------------------------------------------------
+  
+```{r, include = FALSE}
+  cleaned_df <- Clean_df(params$STOCK_NAME, params$PRICE_FILE,
+                         params$VOL_FILE)
+  result_GARCH <- Run_model(cleaned_df, "garch")
+  result_GJR <- Run_model(cleaned_df, "gjr")
+```
+  
+  
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+  plot1 <- ggplot(cleaned_df, aes(Date, log_ret)) + geom_line()
+  plot2 <- ggplot(cleaned_df, aes(log_ret)) + geom_histogram()
+  
+  plot_grid(plot1, plot2, labels = "AUTO")
+```
+  
+```{r, include = FALSE}
+  minimum <- min(cleaned_df$log_ret)
+  p_25 <- quantile(cleaned_df$log_ret, 0.25)[[1]]
+  p_50 <- quantile(cleaned_df$log_ret, 0.50)[[1]]
+  p_75 <- quantile(cleaned_df$log_ret, 0.75)[[1]]
+  maximum <- max(cleaned_df$log_ret)
+  
+  skewness <- skewness(cleaned_df$log_ret)
+  kurtosis <- kurtosis(cleaned_df$log_ret)
+  jb <- jarque.bera.test(cleaned_df$log_ret)
+  jb_stat <- jb$statistic
+  jb_p <- jb$p.value
+  
+  summary <- tribble(
+  ~Minimum, ~`25% Percentile`, ~Median, ~`75% Percentile`, ~Maximum,
+  #-----|-----|-----|-----|-----
+  minimum, p_25, p_50, p_75, maximum
+  )
+  
+  advanced <- tribble(
+  ~Skewness, ~Kurtosis, ~JarqueBeraStat, ~JarqueBeraPVal,
+  #-----|-----|-----|-----
+  skewness, kurtosis, jb_stat, jb_p
+  )
+```
+
+```{r, echo = FALSE}
+  knitr::kable(
+  summary, 
+  caption = "Basic Statistics"
+)
+```
+
+```{r, echo = FALSE}
+  knitr::kable(
+  advanced, 
+  caption = "Advanced Statistics"
+)
+```
+
+Model Result
+-----------------------------------------------------
+```{r, echo = FALSE}
+  knitr::kable(
+  result_GARCH[["Goodness"]], 
+  caption = "GARCH Estimation Result"
+)
+```
+### Interpretation:  
+1. Average return is `r result_GARCH[["Coef"]][["mu"]]`.  
+1. If volatility in the previous period increases by 1% (squared), the current period volatility would change by `r result_GARCH[["Coef"]][["beta1"]]`% (squared). 
+1. If deviation from mean increases by 1%, the volatility would change by `r result_GARCH[["Coef"]][["alpha1"]]`%.  
+ 
+
+
+```{r, echo = FALSE}
+  knitr::kable(
+  result_GJR[["Goodness"]], 
+  caption = "GJR-GARCH Estimation Result"
+)
+```
+### Interpretation:  
+1. Average return is `r result_GJR[["Coef"]][["mu"]]`.  
+1. If volatility in the previous period increases by 1% (squared), the current period volatility would change by `r result_GJR[["Coef"]][["beta1"]]`% (squared).  
+1. If deviation from mean increases by 1% and the deviation is positive, the volatility would change by `r result_GJR[["Coef"]][["alpha1"]]`%.  
+1. If deviation from mean increases by 1% and the deviation is negative, the volatility would change by `r result_GJR[["Coef"]][["alpha1"]] + result_GJR[["Coef"]][["gamma1"]]`%.  
+
+
